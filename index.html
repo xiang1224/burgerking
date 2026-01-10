@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>漢堡王餐廳 POS</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gradient-to-br from-yellow-100 to-red-100 min-h-screen flex items-center justify-center p-6">
+    <div id="app" class="w-full max-w-4xl bg-white rounded-2xl shadow-xl p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+
+        <!-- 左：點餐 -->
+        <div>
+            <h1 class="text-3xl font-extrabold mb-6 text-center text-red-600">
+                🍔 漢堡王餐廳 POS
+            </h1>
+
+            <!-- 組合餐 -->
+            <h2 class="text-lg font-semibold mb-2 text-gray-700">⭐ 唯一組合餐</h2>
+            <label class="flex items-center justify-between mb-6">
+                <div>
+                    <input type="checkbox" v-model="combo.enabled" class="accent-red-600 mr-2">
+                    {{ combo.name }}
+                    <div class="text-sm text-gray-500">固定價 {{ combo.price }} 元</div>
+                </div>
+                <input type="number" min="0" v-model.number="combo.qty" class="border rounded-lg p-2 w-24 text-center"
+                    :disabled="!combo.enabled">
+            </label>
+
+            <!-- 漢堡 -->
+            <h2 class="text-lg font-semibold mb-2">🍔 漢堡</h2>
+            <div class="space-y-2 mb-4">
+                <div v-for="b in burgers" :key="b.name" class="flex items-center">
+                    <span>{{ b.name }}（{{ b.price }}）</span>
+                    <input type="number" min="0" v-model.number="b.qty"
+                        class="border rounded-lg p-1 w-20 ml-auto text-center" :disabled="isComboLocked(b.name)">
+                </div>
+            </div>
+
+            <!-- 點心 -->
+            <h2 class="text-lg font-semibold mb-2">🍟 點心</h2>
+            <div class="space-y-2 mb-4">
+                <div v-for="s in snacks" :key="s.name" class="flex items-center">
+                    <span>{{ s.name }}（{{ s.price }}）</span>
+                    <input type="number" min="0" v-model.number="s.qty"
+                        class="border rounded-lg p-1 w-20 ml-auto text-center" :disabled="isComboLocked(s.name)">
+                </div>
+            </div>
+
+            <!-- 飲料 -->
+            <h2 class="text-lg font-semibold mb-2">🥤 飲料</h2>
+            <div class="space-y-2 mb-6">
+                <div v-for="d in drinks" :key="d.name" class="flex items-center">
+                    <span>{{ d.name }}（{{ d.price }}）</span>
+                    <input type="number" min="0" v-model.number="d.qty"
+                        class="border rounded-lg p-1 w-20 ml-auto text-center" :disabled="isComboLocked(d.name)">
+                </div>
+            </div>
+
+            <div class="flex gap-4">
+                <button @click="calculate" class="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700">
+                    結帳
+                </button>
+                <button @click="reset" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400">
+                    清空
+                </button>
+            </div>
+        </div>
+
+        <!-- 右：明細 -->
+        <div class="bg-gray-50 rounded-xl p-6">
+            <h2 class="text-xl font-bold mb-4 text-center">🧾 點餐明細</h2>
+
+            <ul class="space-y-2 text-sm">
+                <li v-for="item in receipt" :key="item.name" class="flex justify-between">
+                    <span>{{ item.name }} × {{ item.qty }}</span>
+                    <span>{{ item.subtotal }} 元</span>
+                </li>
+            </ul>
+
+            <div class="border-t mt-4 pt-4 text-xl font-bold flex justify-between">
+                <span>總金額</span>
+                <span class="text-red-600">{{ result }} 元</span>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    combo: {
+                        name: '佩佩豬肉堡 + 黃金脆薯 + 果汁',
+                        price: 700,
+                        qty: 0,
+                        enabled: false,
+                        items: ['佩佩豬肉堡', '黃金脆薯', '果汁']
+                    },
+
+                    burgers: [
+                        { name: '蜘蛛人堡', price: 350, qty: 0 },
+                        { name: '灰太郎堡', price: 350, qty: 0 },
+                        { name: '美味蟹堡', price: 350, qty: 0 },
+                        { name: '偶素漢堡', price: 300, qty: 0 },
+                        { name: '佩佩豬肉堡', price: 400, qty: 0 },
+                        { name: '黯然消魂堡', price: 350, qty: 0 },
+                        { name: '乳酪三明治', price: 300, qty: 0 }
+                    ],
+
+                    snacks: [
+                        { name: '黃金脆薯', price: 150, qty: 0 },
+                        { name: '巧克力甜甜圈', price: 150, qty: 0 },
+                        { name: '草莓甜甜圈', price: 150, qty: 0 },
+                        { name: '經典甜甜圈', price: 150, qty: 0 },
+                        { name: 'QQ內內咩噗餅', price: 400, qty: 0 },
+                        { name: '巧克冰炫風', price: 200, qty: 0 },
+                        { name: '香草冰炫風', price: 200, qty: 0 }
+                    ],
+
+                    drinks: [
+                        { name: '果汁', price: 150, qty: 0 },
+                        { name: '可樂', price: 200, qty: 0 },
+                        { name: '雪碧', price: 200, qty: 0 },
+                        { name: '葡萄汁', price: 150, qty: 0 },
+                        { name: '柳橙汁', price: 150, qty: 0 }
+                    ],
+
+                    result: 0,
+                    receipt: []
+                };
+            },
+
+            methods: {
+                isComboLocked(name) {
+                    return this.combo.enabled && this.combo.items.includes(name);
+                },
+
+                calculate() {
+                    let total = 0;
+                    let receipt = [];
+
+                    if (this.combo.enabled && this.combo.qty > 0) {
+                        receipt.push({
+                            name: this.combo.name,
+                            qty: this.combo.qty,
+                            subtotal: this.combo.qty * this.combo.price
+                        });
+                        total += this.combo.qty * this.combo.price;
+                    }
+
+                    [...this.burgers, ...this.snacks, ...this.drinks].forEach(i => {
+                        if (i.qty > 0 && !this.isComboLocked(i.name)) {
+                            receipt.push({
+                                name: i.name,
+                                qty: i.qty,
+                                subtotal: i.qty * i.price
+                            });
+                            total += i.qty * i.price;
+                        }
+                    });
+
+                    this.receipt = receipt;
+                    this.result = total;
+                },
+
+                reset() {
+                    this.combo.enabled = false;
+                    this.combo.qty = 0;
+                    [...this.burgers, ...this.snacks, ...this.drinks].forEach(i => i.qty = 0);
+                    this.receipt = [];
+                    this.result = 0;
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+
+</html>
