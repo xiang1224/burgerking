@@ -10,61 +10,71 @@
 </head>
 
 <body class="bg-gradient-to-br from-yellow-100 to-red-100 min-h-screen flex items-center justify-center p-6">
-    <div id="app" class="w-full max-w-4xl bg-white rounded-2xl shadow-xl p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div id="app" class="w-full max-w-6xl bg-white rounded-2xl shadow-xl p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
 
         <!-- 左側：點餐 -->
         <div>
-            <h1 class="text-3xl font-extrabold mb-6 text-center text-red-600">
-                🍔 漢堡王餐廳 POS
-            </h1>
-
             <!-- 組合餐 -->
-            <h2 class="text-lg font-semibold mb-2 text-gray-700">⭐ 組合餐</h2>
-            <label class="flex items-center justify-between mb-6">
+            <!-- 標題列 -->
+            <div class="flex items-center justify-between mb-6">
+                <h1 class="text-3xl font-extrabold text-red-600">
+                    🍔 漢堡王餐廳 POS
+                </h1>
+                <button @click="toggleLayout"
+                    class="px-5 py-2 rounded-full bg-gradient-to-r from-blue-500 to-blue-700 text-white font-semibold shadow-lg hover:scale-105 hover:shadow-xl transition transform active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 text-sm">
+                    切換版面（{{ layout.toUpperCase() }}）
+                </button>
+            </div>
+
+            <div class="border rounded-xl p-4 mb-6 flex items-center justify-between bg-yellow-50">
                 <div>
-                    <input type="checkbox" v-model="combo.enabled" class="accent-red-600 mr-2">
-                    {{ combo.name }}
+                    <label class="flex items-center">
+                        <input type="checkbox" v-model="combo.enabled" class="accent-red-600 mr-2">
+                        <span class="font-semibold">{{ combo.name }}</span>
+                    </label>
                     <div class="text-sm text-gray-500">固定價 {{ combo.price }} 元</div>
                 </div>
-                <input type="number" min="0" v-model.number="combo.qty" class="border rounded-lg p-2 w-24 text-center"
-                    :disabled="!combo.enabled">
-            </label>
-
-            <!-- 漢堡 -->
-            <h2 class="text-lg font-semibold mb-2">🍔 漢堡</h2>
-            <div class="space-y-2 mb-4">
-                <div v-for="b in burgers" :key="b.name" class="flex items-center">
-                    <span>{{ b.name }}（{{ b.price }}）</span>
-                    <input type="number" min="0" v-model.number="b.qty"
-                        class="border rounded-lg p-1 w-20 ml-auto text-center">
-                </div>
+                <input type="number" min="0" v-model.number="combo.qty" class="border rounded-lg p-2 w-24 text-center">
             </div>
 
-            <!-- 點心 -->
-            <h2 class="text-lg font-semibold mb-2">🍟 點心</h2>
-            <div class="space-y-2 mb-4">
-                <div v-for="s in snacks" :key="s.name" class="flex items-center">
-                    <span>{{ s.name }}（{{ s.price }}）</span>
-                    <input type="number" min="0" v-model.number="s.qty"
-                        class="border rounded-lg p-1 w-20 ml-auto text-center">
-                </div>
+            <!-- ===== v1：清單式 ===== -->
+            <div v-if="layout === 'v1'">
+                <template v-for="section in sections" :key="section.title">
+                    <h2 class="text-lg font-semibold mb-2">{{ section.title }}</h2>
+                    <div class="space-y-2 mb-6">
+                        <div v-for="item in section.items" :key="item.name" class="flex items-center">
+                            <span>{{ item.name }}（{{ item.price }}）</span>
+                            <input type="number" min="0" v-model.number="item.qty"
+                                class="border rounded-lg p-1 w-20 ml-auto text-center">
+                        </div>
+                    </div>
+                </template>
             </div>
 
-            <!-- 飲料 -->
-            <h2 class="text-lg font-semibold mb-2">🥤 飲料</h2>
-            <div class="space-y-2 mb-6">
-                <div v-for="d in drinks" :key="d.name" class="flex items-center">
-                    <span>{{ d.name }}（{{ d.price }}）</span>
-                    <input type="number" min="0" v-model.number="d.qty"
-                        class="border rounded-lg p-1 w-20 ml-auto text-center">
-                </div>
+            <!-- ===== v2：卡片式 ===== -->
+            <div v-else>
+                <template v-for="section in sections" :key="section.title">
+                    <h2 class="text-lg font-semibold mb-3">{{ section.title }}</h2>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+                        <div v-for="item in section.items" :key="item.name"
+                            class="border rounded-xl p-4 shadow-sm hover:shadow-md transition bg-white flex flex-col">
+                            <div class="font-semibold mb-1">{{ item.name }}</div>
+                            <div class="text-sm text-gray-500 mb-3">{{ item.price }} 元</div>
+                            <input type="number" min="0" v-model.number="item.qty"
+                                class="mt-auto border rounded-lg p-2 text-center">
+                        </div>
+                    </div>
+                </template>
             </div>
-
-            <div class="flex gap-4">
-                <button @click="calculate" class="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700">
+            <!-- 結帳 & 清空 -->
+            <div class="flex gap-4 mt-4">
+                <button @click="calculate"
+                    class="flex-1 py-2 rounded-xl bg-gradient-to-r from-red-500 to-red-700 text-white font-semibold shadow-lg hover:scale-105 hover:shadow-xl transition transform active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2">
                     結帳
                 </button>
-                <button @click="reset" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400">
+
+                <button @click="reset"
+                    class="flex-1 py-2 rounded-xl bg-gray-300 text-gray-700 font-semibold shadow-md hover:bg-gray-400 hover:scale-105 hover:shadow-lg transition transform active:scale-95 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2">
                     清空
                 </button>
             </div>
@@ -86,7 +96,9 @@
                 <span class="text-red-600">{{ result }} 元</span>
             </div>
         </div>
-
+        <div class="col-span-full text-center text-xs text-gray-400 mt-6">
+            © 2026 本系統由 | 暈船仔 |小翔 製作，僅供內部使用
+        </div>
     </div>
 
     <script>
@@ -95,6 +107,8 @@
         createApp({
             data() {
                 return {
+                    layout: 'v2',
+
                     combo: {
                         name: '佩佩豬肉堡 + 黃金脆薯 + 果汁',
                         price: 700,
@@ -117,15 +131,24 @@
                         { name: '巧克力甜甜圈', price: 150, qty: 0 },
                         { name: '草莓甜甜圈', price: 150, qty: 0 },
                         { name: '經典甜甜圈', price: 150, qty: 0 },
-                        { name: 'QQ肉肉捲餅', price: 400, qty: 0 }
+                        { name: 'QQ肉肉捲餅', price: 400, qty: 0 },
+                        { name: '巧克冰炫風', price: 200, qty: 0 },
+                        { name: '香草冰炫風', price: 200, qty: 0 }
                     ],
 
                     drinks: [
-                        { name: '果汁', price: 150, qty: 0 },
+                        { name: '藍色思樂冰', price: 200, qty: 0 },
+                        { name: '綠色思樂冰', price: 200, qty: 0 },
                         { name: '可樂', price: 200, qty: 0 },
-                        { name: '雪碧', price: 200, qty: 0 },
+                        { name: '低卡可樂', price: 200, qty: 0 },
+                        { name: '找事可樂', price: 200, qty: 0 },
+                        { name: '雪逼', price: 200, qty: 0 },
+                        { name: '氣泡水', price: 150, qty: 0 },
+                        { name: '蘋果汁', price: 150, qty: 0 },
                         { name: '葡萄汁', price: 150, qty: 0 },
-                        { name: '柳橙汁', price: 150, qty: 0 }
+                        { name: '柳橙汁', price: 150, qty: 0 },
+                        { name: '芒果冰茶', price: 200, qty: 0 },
+                        { name: '鳳梨冰茶', price: 200, qty: 0 }
                     ],
 
                     result: 0,
@@ -133,7 +156,21 @@
                 };
             },
 
+            computed: {
+                sections() {
+                    return [
+                        { title: '🍔 漢堡', items: this.burgers },
+                        { title: '🍟 點心', items: this.snacks },
+                        { title: '🥤 飲料', items: this.drinks }
+                    ];
+                }
+            },
+
             methods: {
+                toggleLayout() {
+                    this.layout = this.layout === 'v1' ? 'v2' : 'v1';
+                },
+
                 calculate() {
                     let total = 0;
                     let receipt = [];
