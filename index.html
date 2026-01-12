@@ -26,7 +26,7 @@
             <div class="border rounded-xl p-4 mb-6 bg-yellow-50">
                 <label class="flex items-center mb-2">
                     <input type="checkbox" v-model="combo.enabled" class="accent-red-600 mr-2">
-                    <span class="font-semibold">自由配組合餐（$159）</span>
+                    <span class="font-semibold">自由配組合餐（$350）</span>
                 </label>
 
                 <div v-if="combo.enabled" class="space-y-3 text-sm">
@@ -249,7 +249,7 @@
                 },
 
                 addCombo() {
-                    let unitPrice = 159;
+                    let unitPrice = 350;
                     let drinkName = this.combo.upgradeEnabled && this.combo.upgrade
                         ? this.combo.upgrade.name
                         : this.combo.drink.name;
