@@ -14,136 +14,187 @@
 
         <!-- 左側：點餐 -->
         <div>
-            <!-- 組合餐 -->
-            <!-- 標題列 -->
             <div class="flex items-center justify-between mb-6">
-                <h1 class="text-3xl font-extrabold text-red-600">
-                    🍔 漢堡王餐廳 POS
-                </h1>
+                <h1 class="text-3xl font-extrabold text-red-600">🍔 漢堡王餐廳 POS</h1>
                 <button @click="toggleLayout"
-                    class="px-5 py-2 rounded-full bg-gradient-to-r from-blue-500 to-blue-700 text-white font-semibold shadow-lg hover:scale-105 hover:shadow-xl transition transform active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 text-sm">
+                    class="px-5 py-2 rounded-full bg-gradient-to-r from-blue-500 to-blue-700 text-white font-semibold">
                     切換版面（{{ layout.toUpperCase() }}）
                 </button>
             </div>
 
-            <div class="border rounded-xl p-4 mb-6 flex items-center justify-between bg-yellow-50">
-                <div>
+            <!-- 組合餐 -->
+            <div class="border rounded-xl p-4 mb-6 bg-yellow-50">
+                <label class="flex items-center mb-2">
+                    <input type="checkbox" v-model="combo.enabled" class="accent-red-600 mr-2">
+                    <span class="font-semibold">自由配組合餐（$159）</span>
+                </label>
+
+                <div v-if="combo.enabled" class="space-y-3 text-sm">
+                    <!-- 漢堡 -->
+                    <select v-model="combo.burger" class="w-full border rounded-lg p-2">
+                        <option disabled value="">選擇漢堡</option>
+                        <option v-for="b in burgers" :key="b.name" :value="b">{{ b.name }}</option>
+                    </select>
+
+                    <!-- 點心 -->
+                    <select v-model="combo.snack" class="w-full border rounded-lg p-2">
+                        <option disabled value="">選擇點心</option>
+                        <option v-for="s in snacks" :key="s.name" :value="s">{{ s.name }}</option>
+                    </select>
+
+                    <!-- 一般飲料（排除升級類） -->
+                    <select v-model="combo.drink" class="w-full border rounded-lg p-2">
+                        <option disabled value="">選擇飲料</option>
+                        <option v-for="d in normalDrinks" :key="d.name" :value="d">{{ d.name }}</option>
+                    </select>
+
+                    <!-- 升級勾選 -->
                     <label class="flex items-center">
-                        <input type="checkbox" v-model="combo.enabled" class="accent-red-600 mr-2">
-                        <span class="font-semibold">{{ combo.name }}</span>
+                        <input type="checkbox" v-model="combo.upgradeEnabled" class="accent-red-600 mr-2">
+                        升級飲料
                     </label>
-                    <div class="text-sm text-gray-500">固定價 {{ combo.price }} 元</div>
+
+                    <!-- 升級選單 -->
+                    <select v-if="combo.upgradeEnabled" @change="openFlavorModal($event.target.value)"
+                        class="w-full border rounded-lg p-2">
+                        <option disabled selected value="">選擇升級種類</option>
+                        <option v-for="u in drinkUpgrades" :key="u.type" :value="u.type">
+                            {{ u.type }} +{{ u.price }}
+                        </option>
+                    </select>
+
+                    <!-- 份數輸入 -->
+                    <div class="flex items-center mb-2">
+                        <label class="mr-2 font-semibold">數量：</label>
+                        <input type="number" min="1" v-model.number="combo.qty"
+                            class="w-20 border rounded p-1 text-center">
+                    </div>
+
+                    <button @click="addCombo"
+                        :disabled="!combo.burger || !combo.snack || (!combo.drink && !(combo.upgradeEnabled && combo.upgrade))"
+                        class="w-full py-2 bg-red-600 text-white rounded-lg font-semibold">
+                        加入組合
+                    </button>
                 </div>
-                <input type="number" min="0" v-model.number="combo.qty" class="border rounded-lg p-2 w-24 text-center">
             </div>
 
-            <!-- ===== v1：清單式 ===== -->
+            <!-- 商品區 -->
             <div v-if="layout === 'v1'">
                 <template v-for="section in sections" :key="section.title">
-                    <h2 class="text-lg font-semibold mb-2">{{ section.title }}</h2>
-                    <div class="space-y-2 mb-6">
-                        <div v-for="item in section.items" :key="item.name" class="flex items-center">
-                            <span>{{ item.name }}（{{ item.price }}）</span>
-                            <input type="number" min="0" v-model.number="item.qty"
-                                class="border rounded-lg p-1 w-20 ml-auto text-center">
-                        </div>
+                    <h2 class="font-semibold mb-2">{{ section.title }}</h2>
+                    <div v-for="item in section.items" :key="item.name" class="flex mb-2">
+                        <span>{{ item.name }}（{{ item.price }}）</span>
+                        <input type="number" min="0" v-model.number="item.qty"
+                            class="ml-auto w-20 border rounded p-1 text-center">
                     </div>
                 </template>
             </div>
 
-            <!-- ===== v2：卡片式 ===== -->
             <div v-else>
                 <template v-for="section in sections" :key="section.title">
-                    <h2 class="text-lg font-semibold mb-3">{{ section.title }}</h2>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-                        <div v-for="item in section.items" :key="item.name"
-                            class="border rounded-xl p-4 shadow-sm hover:shadow-md transition bg-white flex flex-col">
-                            <div class="font-semibold mb-1">{{ item.name }}</div>
-                            <div class="text-sm text-gray-500 mb-3">{{ item.price }} 元</div>
+                    <h2 class="font-semibold mb-3">{{ section.title }}</h2>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div v-for="item in section.items" :key="item.name" class="border rounded-xl p-2 text-center">
+                            <div class="font-semibold">{{ item.name }}</div>
+                            <div class="text-sm text-gray-500">{{ item.price }} 元</div>
                             <input type="number" min="0" v-model.number="item.qty"
-                                class="mt-auto border rounded-lg p-2 text-center">
+                                class="mt-2 w-full border rounded p-1 text-center">
                         </div>
                     </div>
                 </template>
             </div>
-            <!-- 結帳 & 清空 -->
-            <div class="flex gap-4 mt-4">
-                <button @click="calculate"
-                    class="flex-1 py-2 rounded-xl bg-gradient-to-r from-red-500 to-red-700 text-white font-semibold shadow-lg hover:scale-105 hover:shadow-xl transition transform active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2">
-                    結帳
-                </button>
 
-                <button @click="reset"
-                    class="flex-1 py-2 rounded-xl bg-gray-300 text-gray-700 font-semibold shadow-md hover:bg-gray-400 hover:scale-105 hover:shadow-lg transition transform active:scale-95 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2">
-                    清空
-                </button>
+            <div class="flex gap-4 mt-4">
+                <button @click="calculate" class="flex-1 bg-red-600 text-white py-2 rounded-xl">結帳</button>
+                <button @click="reset" class="flex-1 bg-gray-300 py-2 rounded-xl">清空</button>
             </div>
         </div>
 
-        <!-- 右側：明細 -->
+        <!-- 明細 -->
         <div class="bg-gray-50 rounded-xl p-6">
             <h2 class="text-xl font-bold mb-4 text-center">🧾 點餐明細</h2>
-
             <ul class="space-y-2 text-sm">
-                <li v-for="item in receipt" :key="item.name + item.qty" class="flex justify-between">
-                    <span>{{ item.name }} × {{ item.qty }}</span>
+                <li v-for="item in receipt" :key="item.name" class="flex justify-between">
+                    <span>{{ item.name }}</span>
                     <span>{{ item.subtotal }} 元</span>
                 </li>
             </ul>
-
-            <div class="border-t mt-4 pt-4 text-xl font-bold flex justify-between">
+            <div class="border-t mt-4 pt-4 flex justify-between font-bold">
                 <span>總金額</span>
                 <span class="text-red-600">{{ result }} 元</span>
             </div>
         </div>
+
         <div class="col-span-full text-center text-xs text-gray-400 mt-6">
-            © 2026 本系統由 | 暈船仔 |小翔 製作，僅供內部使用
+            © 2026 本系統由｜暈船仔｜小翔 製作，僅供內部使用
         </div>
+
+        <!-- 升級口味選擇視窗 -->
+        <div v-if="showFlavorModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-xl p-6 w-80">
+                <h3 class="text-lg font-bold mb-4 text-center">
+                    選擇 {{ selectedUpgradeType.type }} 口味
+                </h3>
+
+                <div class="space-y-2">
+                    <button v-for="f in selectedUpgradeType.flavors" :key="f" @click="selectFlavor(f)"
+                        class="w-full py-2 border rounded-lg hover:bg-red-50">
+                        {{ f }}
+                    </button>
+                </div>
+
+                <button @click="cancelFlavor" class="mt-4 w-full text-sm text-gray-500">
+                    取消
+                </button>
+            </div>
+        </div>
+
     </div>
 
     <script>
         const { createApp } = Vue;
-
         createApp({
             data() {
                 return {
                     layout: 'v2',
-
                     combo: {
-                        name: '佩佩豬肉堡 + 黃金脆薯 + 果汁',
-                        price: 700,
-                        qty: 0,
-                        enabled: false
+                        enabled: false,
+                        burger: '',
+                        snack: '',
+                        drink: '',
+                        upgradeEnabled: false,
+                        upgrade: '',
+                        qty: 1
                     },
-
+                    showFlavorModal: false,
+                    selectedUpgradeType: null,
+                    selectedFlavor: '',
                     burgers: [
-                        { name: '蜘蛛人堡', price: 350, qty: 0 },
-                        { name: '灰太郎堡', price: 350, qty: 0 },
-                        { name: '美味蟹堡', price: 350, qty: 0 },
-                        { name: '偶素漢堡', price: 300, qty: 0 },
-                        { name: '佩佩豬肉堡', price: 400, qty: 0 },
-                        { name: '黯然消魂堡', price: 350, qty: 0 },
-                        { name: '乳酪三明治', price: 300, qty: 0 }
+                        { name: '蜘蛛人堡', price: 150, qty: 0 },
+                        { name: '灰太郎堡', price: 150, qty: 0 },
+                        { name: '美味蟹堡', price: 150, qty: 0 },
+                        { name: '偶素漢堡', price: 150, qty: 0 },
+                        { name: '佩佩豬肉堡', price: 200, qty: 0 },
+                        { name: '黯然消魂堡', price: 150, qty: 0 },
+                        { name: '乳酪三明治', price: 150, qty: 0 }
                     ],
-
                     snacks: [
-                        { name: '黃金脆薯', price: 150, qty: 0 },
-                        { name: '巧克力甜甜圈', price: 150, qty: 0 },
-                        { name: '草莓甜甜圈', price: 150, qty: 0 },
-                        { name: '經典甜甜圈', price: 150, qty: 0 },
-                        { name: 'QQ肉肉捲餅', price: 400, qty: 0 },
-                        { name: '巧克冰炫風', price: 200, qty: 0 },
-                        { name: '香草冰炫風', price: 200, qty: 0 }
+                        { name: '黃金脆薯', price: 100, qty: 0 },
+                        { name: '巧克力甜甜圈', price: 100, qty: 0 },
+                        { name: '草莓甜甜圈', price: 100, qty: 0 },
+                        { name: '經典甜甜圈', price: 100, qty: 0 },
+                        { name: 'QQ內內咩噗餅', price: 200, qty: 0 },
+                        { name: '巧克冰炫風', price: 150, qty: 0 },
+                        { name: '香草冰炫風', price: 150, qty: 0 }
                     ],
-
                     drinks: [
-                        { name: '藍色思樂冰', price: 200, qty: 0 },
-                        { name: '綠色思樂冰', price: 200, qty: 0 },
-                        { name: '可樂', price: 200, qty: 0 },
-                        { name: '低卡可樂', price: 200, qty: 0 },
-                        { name: '找事可樂', price: 200, qty: 0 },
-                        { name: '雪逼', price: 200, qty: 0 },
-                        { name: '氣泡水', price: 150, qty: 0 },
+                        { name: '藍色思樂冰', price: 150, qty: 0 },
+                        { name: '綠色思樂冰', price: 150, qty: 0 },
+                        { name: '可樂', price: 100, qty: 0 },
+                        { name: '低卡可樂', price: 100, qty: 0 },
+                        { name: '找事可樂', price: 100, qty: 0 },
+                        { name: '雪逼', price: 100, qty: 0 },
+                        { name: '氣泡水', price: 100, qty: 0 },
                         { name: '蘋果汁', price: 150, qty: 0 },
                         { name: '葡萄汁', price: 150, qty: 0 },
                         { name: '柳橙汁', price: 150, qty: 0 },
@@ -151,12 +202,38 @@
                         { name: '鳳梨冰茶', price: 200, qty: 0 }
                     ],
 
-                    result: 0,
-                    receipt: []
+                    drinkUpgrades: [
+                        {
+                            type: '思樂冰',
+                            price: 15,
+                            flavors: ['藍色思樂冰', '綠色思樂冰']
+                        },
+                        {
+                            type: '冰茶',
+                            price: 10,
+                            flavors: ['芒果冰茶', '鳳梨冰茶']
+                        },
+                        {
+                            type: '冰炫風',
+                            price: 20,
+                            flavors: ['巧克力冰炫風', '香草冰炫風']
+                        }
+                    ],
+                    receiptItems: [],  // 單點商品
+                    receiptCombos: [], // 組合餐
+                    receipt: [],       // 合併明細
+                    result: 0
                 };
             },
 
             computed: {
+                normalDrinks() {
+                    return this.drinks.filter(d =>
+                        !d.name.includes('思樂冰') &&
+                        !d.name.includes('冰炫風') &&
+                        !d.name.includes('冰茶')
+                    );
+                },
                 sections() {
                     return [
                         { title: '🍔 漢堡', items: this.burgers },
@@ -171,42 +248,86 @@
                     this.layout = this.layout === 'v1' ? 'v2' : 'v1';
                 },
 
-                calculate() {
-                    let total = 0;
-                    let receipt = [];
+                addCombo() {
+                    let unitPrice = 159;
+                    let drinkName = this.combo.upgradeEnabled && this.combo.upgrade
+                        ? this.combo.upgrade.name
+                        : this.combo.drink.name;
 
-                    if (this.combo.enabled && this.combo.qty > 0) {
-                        receipt.push({
-                            name: this.combo.name,
-                            qty: this.combo.qty,
-                            subtotal: this.combo.qty * this.combo.price
-                        });
-                        total += this.combo.qty * this.combo.price;
+                    if (this.combo.upgradeEnabled && this.combo.upgrade) {
+                        unitPrice += this.combo.upgrade.price;
                     }
 
-                    [...this.burgers, ...this.snacks, ...this.drinks].forEach(i => {
-                        if (i.qty > 0) {
-                            receipt.push({
-                                name: i.name,
-                                qty: i.qty,
-                                subtotal: i.qty * i.price
-                            });
-                            total += i.qty * i.price;
-                        }
+                    let totalPrice = unitPrice * this.combo.qty;
+
+                    this.receiptCombos.push({
+                        name: `${this.combo.burger.name} + ${this.combo.snack.name} + ${drinkName} x${this.combo.qty}`,
+                        subtotal: totalPrice
                     });
 
-                    this.receipt = receipt;
-                    this.result = total;
+                    // 重置 combo
+                    this.combo = { enabled: false, burger: '', snack: '', drink: '', upgradeEnabled: false, upgrade: '', qty: 1 };
+
+                    // 自動計算總額
+                    this.calculate();
+                },
+
+                calculate() {
+                    // 處理單點商品
+                    this.receiptItems = [];
+                    this.sections.forEach(section => {
+                        section.items.forEach(item => {
+                            if (item.qty > 0) {
+                                this.receiptItems.push({
+                                    name: item.name,
+                                    subtotal: item.price * item.qty
+                                });
+                            }
+                        });
+                    });
+
+                    // 合併明細
+                    this.receipt = [...this.receiptItems, ...this.receiptCombos];
+
+                    // 計算總額
+                    this.result = this.receipt.reduce((t, i) => t + i.subtotal, 0);
+                },
+
+                openFlavorModal(typeName) {
+                    this.selectedUpgradeType =
+                        this.drinkUpgrades.find(u => u.type === typeName);
+                    this.showFlavorModal = true;
+                },
+
+                selectFlavor(flavor) {
+                    this.combo.upgrade = {
+                        name: flavor,
+                        price: this.selectedUpgradeType.price
+                    };
+                    this.showFlavorModal = false;
+                },
+
+                cancelFlavor() {
+                    this.showFlavorModal = false;
+                    this.combo.upgrade = '';
                 },
 
                 reset() {
-                    this.combo.enabled = false;
-                    this.combo.qty = 0;
-                    [...this.burgers, ...this.snacks, ...this.drinks].forEach(i => i.qty = 0);
+                    this.receiptItems = [];
+                    this.receiptCombos = [];
                     this.receipt = [];
                     this.result = 0;
+
+                    // 重置單點商品 qty
+                    this.sections.forEach(section => {
+                        section.items.forEach(item => item.qty = 0);
+                    });
+
+                    // 重置 combo
+                    this.combo = { enabled: false, burger: '', snack: '', drink: '', upgradeEnabled: false, upgrade: '', qty: 1 };
                 }
             }
+
         }).mount('#app');
     </script>
 </body>
